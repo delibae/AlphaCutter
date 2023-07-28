@@ -27,6 +27,7 @@ if debug == 0:
     parser.add_argument("--single_out", action="store_true")
     parser.add_argument("--tmp_folder", type=str, required=True)
     parser.add_argument("--csv_save_path", type=str, required=True)
+    parser.add_argument("--except_seq", type=bool, default=False)
     args = parser.parse_args()
 
     loop_min_len = args.loop_min
@@ -715,6 +716,8 @@ for pdb in filepath_list:
             for i in loop_list_merged:
                 loop_start_list.append(i[0])
                 loop_end_list.append(i[1])
+                # print("loop chain id", chain_id)
+                # print("rrrr", chain_id.split("/")[-1])
                 loop_chainid_list.append(chain_id)
 
     for chain_id, helix_list_merged in helix_list_merged_dict.items():
@@ -765,7 +768,7 @@ for pdb in filepath_list:
 
     loop_start_end_df = pd.DataFrame(
         {
-            "PDB": pdb.replace(".pdb", ""),
+            "PDB": pdb.replace(".pdb", "").split("/")[-1],
             "chainID": loop_chainid_list,
             "type": "loop",
             "start": loop_start_list,
@@ -776,7 +779,7 @@ for pdb in filepath_list:
 
     helix_start_end_df = pd.DataFrame(
         {
-            "PDB": pdb.replace(".pdb", ""),
+            "PDB": pdb.replace(".pdb", "").split("/")[-1],
             "chainID": helix_chainid_list,
             "type": "helix",
             "start": helix_start_list,
@@ -787,7 +790,7 @@ for pdb in filepath_list:
 
     domain_start_end_df = pd.DataFrame(
         {
-            "PDB": pdb.replace(".pdb", ""),
+            "PDB": pdb.replace(".pdb", "").split("/")[-1],
             "chainID": domain_chainid_list,
             "type": "domain",
             "start": domain_start_list,
@@ -806,67 +809,70 @@ for pdb in filepath_list:
 summary_df_all.reset_index(drop=True, inplace=True)
 summary_df_all.insert(5, "len", summary_df_all["end"] - summary_df_all["start"] + 1)
 
+# print(">>>>", args.except_seq)
+# print(">>>>", type(args.except_seq))
 # add seq
-seq_list = []
-summary_df_all.sort_values(
-    ["PDB", "chainID", "start"], ascending=[True, True, True], inplace=True
-)
+if args.except_seq == False:
+    seq_list = []
+    summary_df_all.sort_values(
+        ["PDB", "chainID", "start"], ascending=[True, True, True], inplace=True
+    )
 
-for pdb in summary_df_all["PDB"].unique():
-    summary_df_all_pdb = summary_df_all.loc[summary_df_all["PDB"] == pdb]
+    for pdb in summary_df_all["PDB"].unique():
+        summary_df_all_pdb = summary_df_all.loc[summary_df_all["PDB"] == pdb]
 
-    ppdb.read_pdb(pdb + ".pdb")
-    pdb_df = ppdb.df["ATOM"]
+        ppdb.read_pdb(pdb + ".pdb")
+        pdb_df = ppdb.df["ATOM"]
 
-    for chain_id in summary_df_all_pdb["chainID"].unique():
-        summary_df_all_pdb_one = summary_df_all_pdb.loc[
-            summary_df_all_pdb["chainID"] == chain_id
-        ]
+        for chain_id in summary_df_all_pdb["chainID"].unique():
+            summary_df_all_pdb_one = summary_df_all_pdb.loc[
+                summary_df_all_pdb["chainID"] == chain_id
+            ]
 
-        for idx, row in summary_df_all_pdb_one.iterrows():
-            start_idx = pdb_df.loc[
-                (pdb_df["chain_id"] == chain_id)
-                & (pdb_df["residue_number"] == row["start"])
-            ].index[0]
-            end_idx = pdb_df.loc[
-                (pdb_df["chain_id"] == chain_id)
-                & (pdb_df["residue_number"] == row["end"])
-            ].index[0]
+            for idx, row in summary_df_all_pdb_one.iterrows():
+                start_idx = pdb_df.loc[
+                    (pdb_df["chain_id"] == chain_id)
+                    & (pdb_df["residue_number"] == row["start"])
+                ].index[0]
+                end_idx = pdb_df.loc[
+                    (pdb_df["chain_id"] == chain_id)
+                    & (pdb_df["residue_number"] == row["end"])
+                ].index[0]
 
-            seq_df = ppdb.amino3to1()
-            seq = (
-                seq_df.loc[seq_df["chain_id"] == chain_id]
-                .loc[int(start_idx) : int(end_idx) + 1]["residue_name"]
-                .tolist()
-            )
-            seq = "".join(seq)
-            seq_list.append(seq)
+                seq_df = ppdb.amino3to1()
+                seq = (
+                    seq_df.loc[seq_df["chain_id"] == chain_id]
+                    .loc[int(start_idx) : int(end_idx) + 1]["residue_name"]
+                    .tolist()
+                )
+                seq = "".join(seq)
+                seq_list.append(seq)
 
-summary_df_all["seq"] = seq_list
+    summary_df_all["seq"] = seq_list
 
 summary_df_all.reset_index(drop=True, inplace=True)
 
 # save fasta
-fasta = []
+# fasta = []
 
-for index, row in summary_df_all.iterrows():
-    fasta.append(
-        ">"
-        + row["PDB"]
-        + "_"
-        + row["chainID"]
-        + str(int(row["start"]))
-        + "-"
-        + str(int(row["end"]))
-        + "_"
-        + row["type"]
-        + "\n"
-        + row["seq"]
-        + "\n"
-    )
+# for index, row in summary_df_all.iterrows():
+#     fasta.append(
+#         ">"
+#         + row["PDB"]
+#         + "_"
+#         + row["chainID"]
+#         + str(int(row["start"]))
+#         + "-"
+#         + str(int(row["end"]))
+#         + "_"
+#         + row["type"]
+#         + "\n"
+#         + row["seq"]
+#         + "\n"
+#     )
 
-with open("AFCT-OUT_output.fasta", "w") as output:
-    output.write("".join(fasta))
+# with open(os.path.join(args.csv_save_path, "AFCT-OUT_output.fasta"), "w") as output:
+#     output.write("".join(fasta))
 
 # save summary
 summary_df_all.to_csv(os.path.join(args.csv_save_path, "AFCT-OUT_summary.csv"))
