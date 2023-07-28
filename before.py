@@ -197,7 +197,7 @@ three2one_dict = {
 
 # summary df
 summary_df_all = pd.DataFrame(
-    columns=["PDB", "chainID", "type", "start", "end", "pLDDT_mean"]
+    columns=["PDB", "entryId", "chainID", "type", "start", "end", "pLDDT_mean"]
 )
 
 
@@ -764,6 +764,7 @@ for pdb in filepath_list:
     loop_start_end_df = pd.DataFrame(
         {
             "PDB": pdb.replace(".pdb", ""),
+            "entryId": pdb.replace(".pdb", "").split("/")[-1].replace("-model_v4", ""),
             "chainID": loop_chainid_list,
             "type": "loop",
             "start": loop_start_list,
@@ -775,6 +776,7 @@ for pdb in filepath_list:
     helix_start_end_df = pd.DataFrame(
         {
             "PDB": pdb.replace(".pdb", ""),
+            "entryId": pdb.replace(".pdb", "").split("/")[-1].replace("-model_v4", ""),
             "chainID": helix_chainid_list,
             "type": "helix",
             "start": helix_start_list,
@@ -786,6 +788,7 @@ for pdb in filepath_list:
     domain_start_end_df = pd.DataFrame(
         {
             "PDB": pdb.replace(".pdb", ""),
+            "entryId": pdb.replace(".pdb", "").split("/")[-1].replace("-model_v4", ""),
             "chainID": domain_chainid_list,
             "type": "domain",
             "start": domain_start_list,
@@ -841,30 +844,31 @@ for pdb in summary_df_all["PDB"].unique():
             seq_list.append(seq)
 
 summary_df_all["seq"] = seq_list
+summary_df_all.drop("PDB", axis=1, inplace=True)
 
 summary_df_all.reset_index(drop=True, inplace=True)
 
 # save fasta
-fasta = []
+# fasta = []
 
-for index, row in summary_df_all.iterrows():
-    fasta.append(
-        ">"
-        + row["PDB"]
-        + "_"
-        + row["chainID"]
-        + str(int(row["start"]))
-        + "-"
-        + str(int(row["end"]))
-        + "_"
-        + row["type"]
-        + "\n"
-        + row["seq"]
-        + "\n"
-    )
+# for index, row in summary_df_all.iterrows():
+#     fasta.append(
+#         ">"
+#         + row["PDB"]
+#         + "_"
+#         + row["chainID"]
+#         + str(int(row["start"]))
+#         + "-"
+#         + str(int(row["end"]))
+#         + "_"
+#         + row["type"]
+#         + "\n"
+#         + row["seq"]
+#         + "\n"
+#     )
 
-with open("AFCT-OUT_output.fasta", "w") as output:
-    output.write("".join(fasta))
+# with open("AFCT-OUT_output.fasta", "w") as output:
+#     output.write("".join(fasta))
 
 # save summary
 summary_df_all.to_csv("AFCT-OUT_summary.csv")

@@ -8,47 +8,11 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import pcmap
+import type_enforced
 from Bio.PDB import PDBParser
 from Bio.PDB.DSSP import DSSP
 from biopandas.pdb import PandasPdb
 from scipy import stats
-
-# debug = 0
-
-# if debug == 0:
-#     parser = ArgumentParser()
-#     parser.add_argument("--loop_min", type=int)
-#     parser.add_argument("--helix_min", type=int)
-#     parser.add_argument("--domain_min", type=int)
-#     parser.add_argument("--fragment_min", type=int)
-#     parser.add_argument("--pLDDT_min", type=float)
-#     parser.add_argument("--local_contact_range", type=int)
-#     parser.add_argument("--domain_out", action="store_true")
-#     parser.add_argument("--single_out", action="store_true")
-#     parser.add_argument("--tmp_folder", type=str, required=True)
-#     parser.add_argument("--csv_save_path", type=str, required=True)
-#     parser.add_argument("--except_seq", type=bool, default=False)
-#     args = parser.parse_args()
-
-
-# if debug == 1:
-#     loop_min_len = None
-#     helix_min_len = None
-#     domain_min_len = 0
-#     fragment_min_len = 5
-#     pLDDT_min = 0
-#     local_contact_range = 5
-#     domain_out = True
-#     single_out = True
-#     all_pdb = "*_v2.pdb"
-#     # all_pdb = './break_pdb/*v2.pdb'
-#     # all_pdb = 'AF-A5DP36-F1-model_v2.pdb'        # break, res443-444
-#     # all_pdb = 'AF-A0A248AFK6-F1-model_v2.pdb'    # break, res1900-1901
-#     # all_pdb = 'AF-A5GIN1-F1-model_v2.pdb'
-#     # all_pdb = 'ma-*-????.pdb'
-#     # all_pdb = "AF-A0A0E3SVE7-F1-model_v2.pdb"
-#     # all_pdb = "AF-A0A0G2KTI4-F1-model_v2.pdb"
-#     # all_pdb = "AF-A0A0A2JW91-F1-model_v2.pdb"
 
 
 def idx2range(i):
@@ -160,6 +124,7 @@ def merge_list(input_list, pdb_df_groupby):
     return output_list
 
 
+@type_enforced.Enforcer
 def main_pr(
     loop_min: int,
     helix_min: int,
@@ -213,7 +178,7 @@ def main_pr(
 
     # summary df
     summary_df_all = pd.DataFrame(
-        columns=["PDB", "chainID", "type", "start", "end", "pLDDT_mean"]
+        columns=["PDB", "entryId", "chainID", "type", "start", "end", "pLDDT_mean"]
     )
 
     # Collect sequences from all *.pdb in current directory
@@ -785,7 +750,10 @@ def main_pr(
 
         loop_start_end_df = pd.DataFrame(
             {
-                "PDB": pdb.replace(".pdb", "").split("/")[-1],
+                "PDB": pdb.replace(".pdb", ""),
+                "entryId": pdb.replace(".pdb", "")
+                .split("/")[-1]
+                .replace("-model_v4", ""),
                 "chainID": loop_chainid_list,
                 "type": "loop",
                 "start": loop_start_list,
@@ -796,7 +764,10 @@ def main_pr(
 
         helix_start_end_df = pd.DataFrame(
             {
-                "PDB": pdb.replace(".pdb", "").split("/")[-1],
+                "PDB": pdb.replace(".pdb", ""),
+                "entryId": pdb.replace(".pdb", "")
+                .split("/")[-1]
+                .replace("-model_v4", ""),
                 "chainID": helix_chainid_list,
                 "type": "helix",
                 "start": helix_start_list,
@@ -807,7 +778,10 @@ def main_pr(
 
         domain_start_end_df = pd.DataFrame(
             {
-                "PDB": pdb.replace(".pdb", "").split("/")[-1],
+                "PDB": pdb.replace(".pdb", ""),
+                "entryId": pdb.replace(".pdb", "")
+                .split("/")[-1]
+                .replace("-model_v4", ""),
                 "chainID": domain_chainid_list,
                 "type": "domain",
                 "start": domain_start_list,
@@ -823,7 +797,7 @@ def main_pr(
         # append
         summary_df = summary_df.sort_values("start")
         summary_df_all = pd.concat([summary_df_all, summary_df])
-
+    # print(summary_df_all)
     # assign
     summary_df_all.reset_index(drop=True, inplace=True)
     summary_df_all.insert(5, "len", summary_df_all["end"] - summary_df_all["start"] + 1)
@@ -868,7 +842,7 @@ def main_pr(
                     seq_list.append(seq)
 
         summary_df_all["seq"] = seq_list
-
+    summary_df_all.drop("PDB", axis=1, inplace=True)
     summary_df_all.reset_index(drop=True, inplace=True)
 
     # save fasta

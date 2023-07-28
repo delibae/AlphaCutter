@@ -5,12 +5,13 @@ usage: python cif2pdb.py ciffile [pdbfile]
 Requires python BioPython (`pip install biopython`). It should work with recent version of python 2 or 3.
 @author Spencer Bliven <spencer.bliven@gmail.com>
 """
-import os
-import sys
 import argparse
 import logging
-from Bio.PDB.MMCIFParser import MMCIFParser
+import os
+import sys
+
 from Bio.PDB import PDBIO
+from Bio.PDB.MMCIFParser import MMCIFParser
 
 LOG = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ def int_to_chain(i, base=62):
         return int_to_chain(quot - 1, base) + letter
 
 
-class OutOfChainsError(Exception): 
+class OutOfChainsError(Exception):
     pass
 
 
@@ -75,8 +76,9 @@ def rename_chains(structure):
                 o.id = c
     return chainmap
 
+
 def cif2pdb(ciffile):
-    pdbfile = ciffile + ".pdb"
+    pdbfile = ciffile.replace(".cif", "") + ".pdb"
     strucid = os.path.split(ciffile)[-1].split(".")[0]
     # Read file
     parser = MMCIFParser()
@@ -99,16 +101,26 @@ def cif2pdb(ciffile):
     return pdbfile
 
 
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Convert mmCIF to PDB format')
+    parser = argparse.ArgumentParser(description="Convert mmCIF to PDB format")
     parser.add_argument("ciffile", help="mmCIF input file")
-    parser.add_argument("pdbfile", nargs="?", help="PDB output file. Default based on CIF filename")
-    parser.add_argument("-v", "--verbose", help="Long messages",
-                        dest="verbose", default=False, action="store_true")
+    parser.add_argument(
+        "pdbfile", nargs="?", help="PDB output file. Default based on CIF filename"
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        help="Long messages",
+        dest="verbose",
+        default=False,
+        action="store_true",
+    )
     args = parser.parse_args()
 
-    logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.DEBUG if args.verbose else logging.WARN)
+    logging.basicConfig(
+        format="%(levelname)s: %(message)s",
+        level=logging.DEBUG if args.verbose else logging.WARN,
+    )
 
     ciffile = args.ciffile
     pdbfile = args.pdbfile or ciffile + ".pdb"
