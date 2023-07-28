@@ -25,8 +25,6 @@ if debug == 0:
     parser.add_argument("--local_contact_range", type=int)
     parser.add_argument("--domain_out", action="store_true")
     parser.add_argument("--single_out", action="store_true")
-    parser.add_argument("--tmp_folder", type=str, required=True)
-    parser.add_argument("--csv_save_path", type=str, required=True)
     args = parser.parse_args()
 
     loop_min_len = args.loop_min
@@ -41,7 +39,7 @@ if debug == 0:
     pLDDT_min = args.pLDDT_min
     domain_out = args.domain_out
     single_out = args.single_out
-    all_pdb = os.path.join(args.tmp_folder, "*.pdb")
+    all_pdb = "*.pdb"
 
 if debug == 1:
     loop_min_len = None
@@ -869,4 +867,4 @@ with open("AFCT-OUT_output.fasta", "w") as output:
     output.write("".join(fasta))
 
 # save summary
-summary_df_all.to_csv(os.path.join(args.csv_save_path, "AFCT-OUT_summary.csv"))
+summary_df_all.to_csv("AFCT-OUT_summary.csv")
