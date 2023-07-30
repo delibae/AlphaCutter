@@ -222,6 +222,7 @@ for pdb in filepath_list:
         chain_id: pdb_df.loc[pdb_df["chain_id"] == chain_id]
         for chain_id in pdb_df["chain_id"].unique()
     }
+
     pdb_df_dict_groupby = {}
 
     is_looping = True
@@ -253,8 +254,10 @@ for pdb in filepath_list:
                 chain_df["residue_number"] == res_num_dssp
             ]["residue_name"].iloc[0]
             chain_df_res_one = three2one_dict[chain_df_res_three]
-
             if chain_df_res_one != res_dssp:
+                # print("뭣지", chain_df_res_three, res_dssp)
+                # print(res_num_dssp)
+                # print(chain_df)
                 print(
                     "Mismatch between DSSP and PDB residue detected! Res_num =",
                     res_num_dssp,
@@ -619,6 +622,7 @@ for pdb in filepath_list:
             # filter
             if all([domain_pLDDT_mean >= pLDDT_min, domain_len >= domain_min_len]):
                 # load
+                # print("여기서 안걸림?", pLDDT_min)
                 ppdb.read_pdb(pdb)
 
                 # assign domain df to original ppdb object

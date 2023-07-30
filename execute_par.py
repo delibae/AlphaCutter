@@ -1,74 +1,57 @@
 import argparse
 import gzip
+import logging
 import os
 import shutil
 import tarfile
+from concurrent.futures import ThreadPoolExecutor
 from glob import glob
 
 import pandas as pd
-from Alphacutter import main_pr
-from cif2pdb import cif2pdb
 from tqdm import tqdm
 
-folder_num = 0
-# os.environ["CUDA_VISIBLE_DEVICES"] = cuda_num
+from Alphacutter import main_pr
+from cif2pdb import cif2pdb
 
-# CSV 파일들이 있는 폴더 경로
-# input_folder = f"/runs/users/baehanjin/afdb_files/alphacutter/csv"
-input_folder = f"/runs/users/baehanjin/afdb_files/chainsaw/csv/test"
-
-output_base = f"/runs/users/baehanjin/afdb_files/alphacutter/in_afdb"
-
-
-# 특정 경로의 파일들을 압축 해제할 폴더 경로
-target_folder = "/runs/users/baehanjin/afdb_files/proteomes/proteomes"
-
-# 압축 해제를 위한 임시 폴더 경로
+folder_num = 3
+input_folder = f"/runs/users/baehanjin/afdb_files/proteomes/csv/{folder_num}"
+output_base = f"/runs/users/baehanjin/afdb_files/alphacutter"
+target_folder = "/runs/users/baehanjin/afdb_files/proteomes/proteomes/cif"
 tmp_folder_base = "/runs/users/baehanjin/work/AlphaCutter/tmp"
-
-# CSV 파일들의 리스트 가져오기
 csv_files = glob(f"{input_folder}/*.csv")
 
-# List to store successfully processed taxIds
-completed_taxIds = []
 
-# File to store the completed taxIds
 completed_file = (
-    f"/runs/users/baehanjin/work/AlphaCutter/logs/completed_taxIds_{folder_num}.txt"
+    f"/runs/users/baehanjin/work/AlphaCutter/logs/completed_taxIds2_{folder_num}.log"
 )
 
-for file in tqdm(csv_files):
-    # 파일명에서 taxId 추출
+# Set up logging
+logging.basicConfig(filename=completed_file, level=logging.INFO)
+
+
+def process_file(file):
     tax_id = int(file.split("/")[-1].split(".")[0].split("_")[1])
 
-    # Read the CSV file to get the entryId column
     df = pd.read_csv(file)
     entryId_list = df["entryId"].tolist()
 
-    # proteomes_proteome-(tax_id)-0_v4.tar 파일 경로
     tar_file_path = os.path.join(target_folder, f"proteome-tax_id-{tax_id}-0_v4.tar")
 
     tmp_folder = f"{tmp_folder_base}/{tax_id}"
     os.makedirs(tmp_folder, exist_ok=True)
 
-    # tmp 폴더에 압축 해제
     with tarfile.open(tar_file_path, "r") as tar:
-        # Extract files matching the entryId from the CSV file
         for entry in tar:
             entry_name = os.path.basename(entry.name)
             entry_id = entry_name.split("-model_v4.cif.gz")[0]
             if entry_id in entryId_list:
                 tar.extract(entry, tmp_folder)
-                # Decompress the .gz file
                 with gzip.open(os.path.join(tmp_folder, entry.name), "rb") as f_in:
                     with open(os.path.join(tmp_folder, entry.name[:-3]), "wb") as f_out:
                         shutil.copyfileobj(f_in, f_out)
 
     for cif_file in glob(os.path.join(tmp_folder, "*.cif")):
         cif2pdb(cif_file)
-
-    # Dummy job 수행 (여기에 실제로 수행할 작업을 구현)
-    # print(f"Dummy job for taxId {tax_id} is running...")
 
     output_dir = f"{output_base}/{tax_id}"
     os.makedirs(output_dir, exist_ok=True)
@@ -85,17 +68,22 @@ for file in tqdm(csv_files):
         csv_save_path=output_dir,
         except_seq=True,
     )
-    # main(parse_args_custom(output_file=output_file, structure_dir=tmp_folder))
 
-    # Add the completed taxId to the list
-    # completed_taxIds.append(tax_id)
+    # Log the completed taxId instead of writing it to a file directly.
+    logging.info(tax_id)
 
-    # Save the completed taxId to the file
-    with open(completed_file, "a") as file:
-        file.write(str(tax_id) + "\n")
-
-    # tmp 폴더 삭제
     shutil.rmtree(tmp_folder)
 
+    progress_bar.update()
+
+
+# Max number of workers for ThreadPoolExecutor
+max_workers = 20
+
+# Use a ThreadPoolExecutor to parallelize the execution.
+progress_bar = tqdm(total=len(csv_files))
+
+with ThreadPoolExecutor(max_workers=max_workers) as executor:
+    executor.map(process_file, csv_files)
+
 print("작업이 완료되었습니다.")
-# print("Completed taxIds:", completed_taxIds)

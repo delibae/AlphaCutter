@@ -18,8 +18,8 @@ def file_hashes_match(file_path1, file_path2):
 
 
 if __name__ == "__main__":
-    file1_path = "./tmp/AFCT-OUT_summary.csv"
-    file2_path = "./AFCT-OUT_summary.csv"
+    file1_path = "./test.pdb"
+    file2_path = "./AF-A0A0F6SCM5-F1-model_v4_be.pdb"
 
     if file_hashes_match(file1_path, file2_path):
         print("두 파일이 완벽히 일치합니다.")
